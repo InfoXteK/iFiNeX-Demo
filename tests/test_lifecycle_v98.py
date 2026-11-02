@@ -1,0 +1,58 @@
+import sys,subprocess,time,os
+from playwright.sync_api import sync_playwright
+root=os.path.join(os.path.dirname(os.path.abspath(__file__)),'..','demo','dist')
+srv=subprocess.Popen([sys.executable,'-m','http.server','8192','-d',root],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL);time.sleep(1)
+ok=True
+def chk(n,c):
+    global ok;print(('PASS ' if c else 'FAIL ')+n);ok=ok and bool(c)
+try:
+ with sync_playwright() as p:
+  b=p.chromium.launch();c=b.new_context(viewport={'width':1400,'height':900});c.route(lambda u:'googleapis.com' in u or 'gstatic.com' in u,lambda r:r.abort());pg=c.new_page();errs=[];pg.on('pageerror',lambda e:errs.append(str(e)))
+  pg.on('console',lambda m: print('CONSOLE',m.text[:150]) if m.type=='error' else None)
+  pg.on('dialog',lambda d:d.accept());pg.goto('http://127.0.0.1:8192/play.html?scenario=trip&user=alex');pg.wait_for_timeout(5500)
+  N='ifx-demo:alex@demo.test';f=pg.frame(name=N)
+  # ET list
+  f.evaluate("etOpen=null;etTab='period';renderEt()");pg.wait_for_timeout(500)
+  txt=f.inner_text('#et-root');chk('ET bar present','Completed' in txt and 'Active' in txt)
+  chk('ET active shows Home groceries',  'Home groceries' in txt and 'Last month groceries' not in txt)
+  chk('ET has kebab',f.locator('#et-root .lc-dots').count()>=1)
+  f.click('#et-root .lc-bar [data-v=completed]');pg.wait_for_timeout(300)
+  chk('ET completed shows auto-completed tracker','Last month groceries' in f.inner_text('#et-root') and 'automatic' in f.inner_text('#et-root'))
+  f.click('#et-root .lc-bar [data-v=active]');pg.wait_for_timeout(300)
+  f.locator('#et-root .lc-dots').first.click();pg.wait_for_timeout(200)
+  chk('menu has Edit/Complete/Delete', all(x in f.inner_text('.lc-menu') for x in ['Edit','Mark as completed','Delete','Export']))
+  f.get_by_text('Mark as completed').click();pg.wait_for_timeout(600)
+  try: f.once('dialog',lambda d:d.accept())
+  except: pass
+  pg.wait_for_timeout(300)
+  st=pg.evaluate("window.__IFX_DEMO.db.et_trackers.map(t=>t.id+':'+t.status)")
+  print(st)
+  chk('ET mark completed saved', any(x.startswith('1:completed') or x.startswith('2:completed') for x in st))
+  # plans
+  f.evaluate("switchPage('plans')");pg.wait_for_timeout(500)
+  t2=f.inner_text('#page-plans');chk('plans bar','Completed' in t2 and 'Active' in t2)
+  chk('plans: Phone EPP active, Gold coin plan hidden','Phone EPP' in t2 and 'Gold coin plan' not in t2)
+  f.click('#page-plans .lc-bar [data-v=completed]');pg.wait_for_timeout(300)
+  t3=f.inner_text('#page-plans');chk('plans completed shows Gold coin plan (auto)','Gold coin plan' in t3)
+  f.select_option('#page-plans .lc-bar [data-lc=mode]','range');pg.wait_for_timeout(300)
+  chk('plans custom date inputs',f.locator('#page-plans .lc-bar input[type=date]').count()==2)
+  # budget
+  f.evaluate("switchPage('budget')");pg.wait_for_timeout(1500)
+  f.click('#bp-root [data-v=budget]');pg.wait_for_timeout(500)
+  t4=f.inner_text('#bp-root');chk('budget bar','Completed' in t4 and 'Active' in t4)
+  chk('budget current-month lines',  'Emergency fund' in t4)
+  f.click('#bp-root .lc-bar [data-v=completed]');pg.wait_for_timeout(300)
+  print('BUDGET-COMPLETED-TEXT',f.inner_text('#bp-root')[:600].replace(chr(10),' | '))
+  chk('budget completed empty for current month', 'Nothing matches' in f.inner_text('#bp-root'))
+  f.click('#bp-root [data-act="m-"]');pg.wait_for_timeout(500)
+  t5=f.inner_text('#bp-root');chk('previous month auto-switches to Completed and shows lines','Groceries' in t5 and 'Outing' in t5)
+  f.click('#bp-root [data-v=goals]');pg.wait_for_timeout(400)
+  f.click('#bp-root .lc-bar [data-v=all]');pg.wait_for_timeout(300)
+  t6=f.inner_text('#bp-root');chk('goals all shows both','Emergency fund' in t6 and 'New headphones' in t6)
+  chk('goal kebab',f.locator('#bp-root .lc-dots').count()>=2)
+  pg.screenshot(path='/tmp/lc_shot.png')
+  chk('no page errors',not errs)
+  if errs:print(errs[:5])
+  b.close()
+finally: srv.terminate()
+sys.exit(0 if ok else 1)

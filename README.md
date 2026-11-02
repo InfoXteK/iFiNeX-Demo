@@ -12,11 +12,20 @@ Website = `web/` (plain HTML/JS, host anywhere static, e.g. GitHub Pages). Andro
 **No real data, keys or URLs are in this repository.** You bring your own backend.
 
 ## Live demo
-<p align="center"><img src="docs/img/demo-choose.png" width="70%" alt="Demo chooser: Website or Mobile app"></p>
+<p align="center"><img src="docs/img/demo-landing.png" width="80%" alt="Demo landing page: choose Website or Mobile app"></p>
 
-After you publish the demo (see `docs/10-LIVE-DEMO.md`, 5 minutes) your repository gets a **Live demo** link at `https://squadsplit.github.io/iFiNeX-Demo/'. Visitors choose **Website** or **Mobile app** (or both side by side); everything uses fictional data in the browser, no backend.
+After you publish the demo (see `docs/10-LIVE-DEMO.md`, 5 minutes) your repository gets a **Live demo** link at `https://<your-user>.github.io/<repo>/`. It is a full explainer page, not just a preview:
 
-<p align="center"><img src="docs/img/demo-web.png" width="45%" alt="Website demo"> <img src="docs/img/demo-mobile.png" width="45%" alt="Mobile demo"></p>
+- **Choose Website or Mobile app** on the first screen (or both side by side).
+- **17 guided walkthroughs** — each opens the right screen for the right person (admin, member, delegate) and tells you what to try.
+- **Request Inspector** — shows every database call the app makes (table, filter, payload) and why the database allows it.
+- **Searchable guide to every option and function** (77 entries), a **database explorer** (34 tables + server functions), key flows, roles table and honest limits.
+- Includes a clearly labelled **simulated Google Drive** connect / schedule / back-up / restore flow.
+
+Everything uses fictional people and fake data in the browser — no backend.
+
+<p align="center"><img src="docs/img/demo-web.png" width="45%" alt="Website walkthrough"> <img src="docs/img/demo-inspector.png" width="45%" alt="Request inspector"></p>
+<p align="center"><img src="docs/img/demo-mobile.png" width="30%" alt="Mobile app demo"> <img src="docs/img/demo-guide.png" width="60%" alt="Searchable feature guide"></p>
 
 Run it locally: `bash demo/build-demo.sh` then `python3 -m http.server -d demo/dist 8181` and open http://localhost:8181 .
 
@@ -42,3 +51,6 @@ demo/      live demo (chooser: website / mobile / both)
 docs/      guides      .github/workflows/  deploy-web · deploy-demo · android-build
 ```
 License: MIT (see LICENSE). Security: see SECURITY.md.
+
+## What's new in v9.8
+Mark as completed / Reopen / Edit / Delete (⋯ menu) and an Active · Completed · All area in the Expense Tracker, EPP & Gold plans and Budget planner; month / custom date / category filters; automatic move to Completed (nightly `ifx_auto_complete()`); faster saving; Android app 2.12.0 no longer requests install/battery permissions (no install-permission warning). Database: run `supabase/schema.sql` on a new project (already includes v9.8).

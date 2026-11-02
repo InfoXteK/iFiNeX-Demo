@@ -1666,18 +1666,18 @@ revoke all on function public.notify_settlement_edit() from public, anon, authen
 -- A2) Background-photo bucket is PUBLIC (photos load by URL, no policy needed). Nobody may LIST other people's folders (folder name = e-mail).
 drop policy if exists user_backgrounds_read on storage.objects;
 create policy user_backgrounds_read on storage.objects for select to authenticated
-  using (bucket_id = 'user-backgrounds' and lower((storage.foldername(name))[1]) = (select public.my_email()));
+  using (bucket_id = 'user-backgrounds' and lower((storage.foldername(name))[1]) = (select private.my_email()));
 
 -- A3) Only REGISTERED people may upload/replace/delete photos (open sign-up accounts could otherwise fill your storage, 5 MB each).
 drop policy if exists user_backgrounds_write on storage.objects;
 create policy user_backgrounds_write on storage.objects for insert to authenticated
-  with check (bucket_id = 'user-backgrounds' and lower((storage.foldername(name))[1]) = (select public.my_email()) and (select public.is_registered()));
+  with check (bucket_id = 'user-backgrounds' and lower((storage.foldername(name))[1]) = (select private.my_email()) and (select private.is_registered()));
 drop policy if exists user_backgrounds_update on storage.objects;
 create policy user_backgrounds_update on storage.objects for update to authenticated
-  using (bucket_id = 'user-backgrounds' and lower((storage.foldername(name))[1]) = (select public.my_email()) and (select public.is_registered()));
+  using (bucket_id = 'user-backgrounds' and lower((storage.foldername(name))[1]) = (select private.my_email()) and (select private.is_registered()));
 drop policy if exists user_backgrounds_delete on storage.objects;
 create policy user_backgrounds_delete on storage.objects for delete to authenticated
-  using (bucket_id = 'user-backgrounds' and lower((storage.foldername(name))[1]) = (select public.my_email()));
+  using (bucket_id = 'user-backgrounds' and lower((storage.foldername(name))[1]) = (select private.my_email()));
 
 -- A4) bill_devices: explicit deny-all for API roles (only the SECURITY DEFINER RPCs register_device / poll_notifications / unregister_device use it).
 drop policy if exists bill_devices_no_direct_access on public.bill_devices;
@@ -1770,13 +1770,13 @@ create index if not exists prev_balances_squad_month_idx on public.prev_balances
 --    admin = everything.  Otherwise: a squad-split user whose e-mail (or the e-mail of the account they are a delegate for) belongs to a person in that squad.
 create or replace function public.is_in_squad(p_squad bigint) returns boolean
 language sql stable security definer set search_path = public as $fn$
-  select (select public.is_squad_admin())
-      or ( (select public.is_squad_member())
+  select (select private.is_squad_admin())
+      or ( (select private.is_squad_member())
            and exists (
              select 1 from public.squad_members sm join public.members_config m on m.id = sm.member_id
               where sm.squad_id = p_squad and coalesce(m.email, '') <> ''
-                and ( lower(m.email) = (select my_email())
-                      or lower(m.email) in (select lower(u.email) from public.app_users u where lower(coalesce(u.delegate_email, '')) = (select my_email())) ) ) )
+                and ( lower(m.email) = (select private.my_email())
+                      or lower(m.email) in (select lower(u.email) from public.app_users u where lower(coalesce(u.delegate_email, '')) = (select private.my_email())) ) ) )
 $fn$;
 revoke execute on function public.is_in_squad(bigint) from public, anon;
 grant  execute on function public.is_in_squad(bigint) to authenticated;
@@ -1788,17 +1788,17 @@ alter table public.squad_members enable row level security;
 drop policy if exists squads_select on public.squads;
 create policy squads_select on public.squads for select to authenticated using (public.is_in_squad(id));
 drop policy if exists squads_admin_write on public.squads;
-create policy squads_admin_write on public.squads for all to authenticated using ((select public.is_squad_admin())) with check ((select public.is_squad_admin()));
+create policy squads_admin_write on public.squads for all to authenticated using ((select private.is_squad_admin())) with check ((select private.is_squad_admin()));
 
 drop policy if exists squad_members_sel on public.squad_members;
 create policy squad_members_sel on public.squad_members for select to authenticated using (public.is_in_squad(squad_id));
 drop policy if exists squad_members_admin_write on public.squad_members;
-create policy squad_members_admin_write on public.squad_members for all to authenticated using ((select public.is_squad_admin())) with check ((select public.is_squad_admin()));
+create policy squad_members_admin_write on public.squad_members for all to authenticated using ((select private.is_squad_admin())) with check ((select private.is_squad_admin()));
 
 drop policy if exists ifx_registered_gate on public.squads;
-create policy ifx_registered_gate on public.squads as restrictive for all to authenticated using ((select public.is_registered())) with check ((select public.is_registered()));
+create policy ifx_registered_gate on public.squads as restrictive for all to authenticated using ((select private.is_registered())) with check ((select private.is_registered()));
 drop policy if exists ifx_registered_gate on public.squad_members;
-create policy ifx_registered_gate on public.squad_members as restrictive for all to authenticated using ((select public.is_registered())) with check ((select public.is_registered()));
+create policy ifx_registered_gate on public.squad_members as restrictive for all to authenticated using ((select private.is_registered())) with check ((select private.is_registered()));
 
 revoke all on public.squads, public.squad_members from anon;
 revoke truncate, references, trigger on public.squads, public.squad_members from authenticated;
@@ -1823,8 +1823,8 @@ create policy squad_prevbal_insert on public.prev_balances for insert to authent
 -- people: you see yourself and the people who share a squad with you (admin: everybody)
 drop policy if exists squad_members_select on public.members_config;
 create policy squad_members_select on public.members_config for select to authenticated using (
-  (select public.is_squad_admin())
-  or lower(coalesce(email, '')) = (select my_email())
+  (select private.is_squad_admin())
+  or lower(coalesce(email, '')) = (select private.my_email())
   or exists (select 1 from public.squad_members sm where sm.member_id = members_config.id and public.is_in_squad(sm.squad_id))
 );
 
@@ -1839,7 +1839,7 @@ declare
   v_color text := case when coalesce(p_color, '') ~ '^#[0-9a-fA-F]{6}$' then p_color else '#4d96ff' end;
   v_id    text;
 begin
-  if not (select public.is_squad_admin()) then raise exception 'admin_only'; end if;
+  if not (select private.is_squad_admin()) then raise exception 'admin_only'; end if;
   if v_name = '' or char_length(v_name) > 60 then raise exception 'bad_name'; end if;
   if v_email <> '' and v_email !~ '^[^@[:space:]]+@[^@[:space:]]+\.[^@[:space:]]+$' then raise exception 'bad_email'; end if;
   if v_email <> '' then
@@ -1870,7 +1870,7 @@ declare
   v_mem   text[];
   r       record;
 begin
-  if not (select public.is_squad_admin()) then raise exception 'admin_only'; end if;
+  if not (select private.is_squad_admin()) then raise exception 'admin_only'; end if;
   if v_name = '' or char_length(v_name) > 60 then raise exception 'bad_name'; end if;
   select coalesce(array_agg(x order by o), '{}') into v_mem
     from (select x, min(o) as o from unnest(coalesce(p_members, '{}'::text[])) with ordinality as t(x, o) group by x) d;
@@ -1879,7 +1879,7 @@ begin
 
   if v_id is null then
     insert into public.squads (name, emoji, color, sort_order, created_by)
-      values (v_name, v_emoji, v_color, coalesce((select max(sort_order) + 1 from public.squads), 0), (select my_email()))
+      values (v_name, v_emoji, v_color, coalesce((select max(sort_order) + 1 from public.squads), 0), (select private.my_email()))
       returning id into v_id;
   else
     update public.squads set name = v_name, emoji = v_emoji, color = v_color where id = v_id;
@@ -1907,7 +1907,7 @@ end $fn$;
 create or replace function public.squad_set_archived(p_id bigint, p_archived boolean) returns void
 language plpgsql security definer set search_path = public as $fn$
 begin
-  if not (select public.is_squad_admin()) then raise exception 'admin_only'; end if;
+  if not (select private.is_squad_admin()) then raise exception 'admin_only'; end if;
   if p_archived and not exists (select 1 from public.squads where id <> p_id and not is_archived) then raise exception 'last_squad'; end if;
   update public.squads set is_archived = coalesce(p_archived, false) where id = p_id;
   if not found then raise exception 'squad_not_found'; end if;
@@ -1924,7 +1924,7 @@ begin
   if p_table <> all (array['bill_cards','bill_card_shares','bill_card_payments','bill_payees','bill_expenses','bill_owed','bill_settlements','bill_payee_entries','bill_plans','bill_plan_payments','et_groups','et_trackers','et_entries','et_categories','et_kinds','bp_income','bp_items','bp_goals','expenses','settlements','prev_balances','squads','squad_members']) then
     raise exception 'table_not_allowed';
   end if;
-  if (select my_email()) is null then raise exception 'not_signed_in'; end if;
+  if (select private.my_email()) is null then raise exception 'not_signed_in'; end if;
   v_seq := pg_get_serial_sequence('public.'||quote_ident(p_table), 'id');
   if v_seq is null then return; end if;
   execute format('select max(id) from public.%I', p_table) into v_max;
@@ -1937,7 +1937,7 @@ declare
   allowed constant text[] := array['bill_cards','bill_card_shares','bill_card_payments','bill_payees','bill_expenses','bill_owed','bill_settlements','bill_payee_entries','bill_plans','bill_plan_payments','bill_user_prefs','et_groups','et_trackers','et_entries','et_categories','et_kinds','bp_income','bp_items','bp_goals','members_config','squads','squad_members','expenses','settlements','prev_balances'];
   r jsonb; v_cols text; n_ins int := 0; n_skip int := 0; n_fail int := 0; n int; v_err text;
 begin
-  if (select my_email()) is null or not (select public.is_registered()) then raise exception 'not_signed_in'; end if;
+  if (select private.my_email()) is null or not (select private.is_registered()) then raise exception 'not_signed_in'; end if;
   if p_table <> all (allowed) then raise exception 'table_not_allowed'; end if;
   if jsonb_typeof(p_rows) <> 'array' or jsonb_array_length(p_rows) > 500 then raise exception 'bad_rows'; end if;
   if to_regclass('public.'||quote_ident(p_table)) is null then return jsonb_build_object('ok', true, 'inserted', 0, 'skipped', 0, 'failed', jsonb_array_length(p_rows), 'error', 'table_missing_on_server'); end if;
@@ -2022,9 +2022,9 @@ revoke all on public.gdrive_links, public.gdrive_oauth_state from anon, authenti
 revoke all on public.gdrive_backup_settings from anon, authenticated;
 grant select on public.gdrive_backup_settings to authenticated;
 drop policy if exists gdrive_settings_own_select on public.gdrive_backup_settings;
-create policy gdrive_settings_own_select on public.gdrive_backup_settings for select to authenticated using (lower(user_email) = (select my_email()));
+create policy gdrive_settings_own_select on public.gdrive_backup_settings for select to authenticated using (lower(user_email) = (select private.my_email()));
 drop policy if exists ifx_registered_gate on public.gdrive_backup_settings;
-create policy ifx_registered_gate on public.gdrive_backup_settings as restrictive for all to authenticated using ((select public.is_registered())) with check ((select public.is_registered()));
+create policy ifx_registered_gate on public.gdrive_backup_settings as restrictive for all to authenticated using ((select private.is_registered())) with check ((select private.is_registered()));
 
 -- 3) when is the next backup?  (all times are the person's own local time zone) -------------------------------------------------------
 create or replace function public.gdrive_next_run(p_freq text, p_at text, p_wd integer, p_md integer, p_every integer, p_unit text, p_tz text, p_from timestamptz)
@@ -2056,9 +2056,9 @@ grant execute on function public.gdrive_next_run(text, text, integer, integer, i
 -- 4) what the app shows (never returns anything secret) ----------------------------------------------------------------------------------
 create or replace function public.gdrive_status() returns jsonb
 language plpgsql stable security definer set search_path = public as $fn$
-declare v_me text := (select my_email()); l public.gdrive_links; s public.gdrive_backup_settings;
+declare v_me text := (select private.my_email()); l public.gdrive_links; s public.gdrive_backup_settings;
 begin
-  if v_me = '' or not (select public.is_registered()) then raise exception 'not_signed_in'; end if;
+  if v_me = '' or not (select private.is_registered()) then raise exception 'not_signed_in'; end if;
   select * into l from public.gdrive_links where user_email = v_me;
   select * into s from public.gdrive_backup_settings where user_email = v_me;
   return jsonb_build_object(
@@ -2072,9 +2072,9 @@ grant execute on function public.gdrive_status() to authenticated;
 create or replace function public.gdrive_set_schedule(p_enabled boolean, p_frequency text, p_at_time text, p_weekday integer, p_month_day integer,
                                                      p_custom_every integer, p_custom_unit text, p_tz text, p_keep_last integer) returns jsonb
 language plpgsql security definer set search_path = public as $fn$
-declare v_me text := (select my_email()); v_next timestamptz; v_max integer; v_min integer;
+declare v_me text := (select private.my_email()); v_next timestamptz; v_max integer; v_min integer;
 begin
-  if v_me = '' or not (select public.is_registered()) then raise exception 'not_signed_in'; end if;
+  if v_me = '' or not (select private.is_registered()) then raise exception 'not_signed_in'; end if;
   if p_frequency not in ('daily', 'weekly', 'monthly', 'custom') then raise exception 'bad_frequency'; end if;
   if p_at_time !~ '^([01][0-9]|2[0-3]):[0-5][0-9]$' then raise exception 'bad_time'; end if;
   if p_weekday not between 0 and 6 or p_month_day not between 1 and 28 then raise exception 'bad_day'; end if;
@@ -2272,3 +2272,73 @@ select (select schedule from cron.job where jobname = 'ifinex-gdrive-due') as gd
        (select count(*) from cron.job where jobname = 'ifinex-cron-log-purge') as purge_job_should_be_1,
        (select count(*) from cron.job_run_details) as log_rows_now,
        (select count(*) from pg_indexes where indexname in ('idx_bill_card_payments_email','idx_bill_payee_entries_card','idx_bill_push_subscriptions_email')) as dupes_should_be_0;
+
+-- ===== v9.8 (appended) =====
+-- =====================================================================================================================
+-- iFiNeX v9.8 — DATABASE UPGRADE (safe to run more than once; changes no existing data)
+--   1. "Mark as completed" for Expense Tracker trackers, EPP/Gold plans, budget lines, income and savings goals
+--        columns:  status ('active' | 'completed'), completed_at, auto_complete (true = moves to Completed by itself)
+--   2. Automatic move to Completed (runs every night 00:10 Dubai time via pg_cron; the app also shows it instantly)
+--        tracker / budget month  -> when the end date (or the month) is over
+--        EPP / Gold plan         -> when every instalment is paid
+--        savings goal            -> when saved >= target
+--        income line             -> when its pay date / month is over
+--   3. Speed: indexes for the 3 foreign keys the Supabase advisor flagged + the new status filters
+-- Run: Supabase -> SQL Editor -> New query -> paste ALL of this -> Run. Expected: "Success. No rows returned".
+-- =====================================================================================================================
+
+-- 1) status columns ------------------------------------------------------------------------------------------------
+do $$
+declare t text;
+begin
+  foreach t in array array['et_trackers','bill_plans','bp_items','bp_income','bp_goals'] loop
+    execute format('alter table public.%I add column if not exists status text not null default %L', t, 'active');
+    execute format('alter table public.%I add column if not exists completed_at timestamptz', t);
+    execute format('alter table public.%I add column if not exists auto_complete boolean not null default true', t);
+    if not exists (select 1 from pg_constraint where conname = t || '_status_chk') then
+      execute format('alter table public.%I add constraint %I check (status in (%L,%L))', t, t || '_status_chk', 'active', 'completed');
+    end if;
+  end loop;
+end $$;
+
+-- 2) speed: foreign-key indexes (advisor lint 0001) + status filters --------------------------------------------------
+create index if not exists idx_bill_expenses_card     on public.bill_expenses (card_id);
+create index if not exists idx_bill_plans_card        on public.bill_plans (card_id);
+create index if not exists idx_bill_plans_payee       on public.bill_plans (payee_id);
+create index if not exists idx_bill_plans_status      on public.bill_plans (lower(user_email), status);
+create index if not exists idx_et_trackers_status     on public.et_trackers (lower(user_email), status);
+create index if not exists idx_bp_items_status        on public.bp_items (lower(user_email), status, month);
+create index if not exists idx_bp_goals_status        on public.bp_goals (lower(user_email), status);
+
+-- 3) automatic "move to Completed" ------------------------------------------------------------------------------------
+create or replace function public.ifx_auto_complete() returns integer
+language plpgsql security definer set search_path = public as $$
+declare n integer := 0; c integer; cur text := to_char(current_date, 'YYYY-MM');
+begin
+  update et_trackers set status = 'completed', completed_at = now()
+   where status = 'active' and auto_complete and end_date < current_date;                       get diagnostics c = row_count; n := n + c;
+  update bill_plans p set status = 'completed', completed_at = now()
+   where p.status = 'active' and p.auto_complete
+     and exists     (select 1 from bill_plan_payments x where x.plan_id = p.id)
+     and not exists (select 1 from bill_plan_payments x where x.plan_id = p.id and x.status <> 'paid'); get diagnostics c = row_count; n := n + c;
+  update bp_items set status = 'completed', completed_at = now()
+   where status = 'active' and auto_complete and month < cur;                                    get diagnostics c = row_count; n := n + c;
+  update bp_income set status = 'completed', completed_at = now()
+   where status = 'active' and auto_complete and (month < cur or (pay_date is not null and pay_date <= current_date)); get diagnostics c = row_count; n := n + c;
+  update bp_goals set status = 'completed', completed_at = now()
+   where status = 'active' and auto_complete and target > 0 and saved >= target;                 get diagnostics c = row_count; n := n + c;
+  return n;
+end $$;
+revoke all on function public.ifx_auto_complete() from public, anon, authenticated;
+
+-- nightly job (00:10 Dubai = 20:10 UTC). Skipped quietly if pg_cron is not enabled on your project.
+do $$
+begin
+  if exists (select 1 from pg_extension where extname = 'pg_cron') then
+    perform cron.unschedule(jobid) from cron.job where jobname = 'ifinex-auto-complete';
+    perform cron.schedule('ifinex-auto-complete', '10 20 * * *', 'select public.ifx_auto_complete()');
+  end if;
+end $$;
+
+-- run once now so already-finished items move today
+select public.ifx_auto_complete() as moved_to_completed;
