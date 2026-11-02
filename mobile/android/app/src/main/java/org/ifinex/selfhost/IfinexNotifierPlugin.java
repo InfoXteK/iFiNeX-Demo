@@ -114,25 +114,21 @@ public class IfinexNotifierPlugin extends Plugin {
 
     @PluginMethod
     public void requestBatteryExemption(PluginCall call) {
+        // v2.12: no REQUEST_IGNORE_BATTERY_OPTIMIZATIONS permission any more (it raised the install warning). Open the system list; the user picks iFiNeX -> "Unrestricted".
         Context c = getContext();
-        if (Build.VERSION.SDK_INT < 23) {
-            call.resolve();
-            return;
-        }
+        if (Build.VERSION.SDK_INT < 23) { call.resolve(); return; }
         try {
-            Intent i = new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, Uri.parse("package:" + c.getPackageName()));
+            Intent i = new Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS);
             i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             c.startActivity(i);
             call.resolve();
         } catch (Throwable t) {
             try {
-                Intent i2 = new Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS);
+                Intent i2 = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + c.getPackageName()));
                 i2.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                 c.startActivity(i2);
                 call.resolve();
-            } catch (Throwable t2) {
-                call.reject("Cannot open battery settings");
-            }
+            } catch (Throwable t2) { call.reject("Cannot open battery settings"); }
         }
     }
 

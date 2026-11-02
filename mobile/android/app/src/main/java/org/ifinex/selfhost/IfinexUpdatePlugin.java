@@ -204,7 +204,7 @@ public class IfinexUpdatePlugin extends Plugin {
             o.put("packageName", ctx().getPackageName());
             o.put("repo", res("ifinex_update_repo", ""));
             o.put("edition", res("ifinex_update_edition", ""));
-            o.put("canInstall", Build.VERSION.SDK_INT < 26 || ctx().getPackageManager().canRequestPackageInstalls());
+            o.put("canInstall", false);   // v2.12: the app no longer installs anything itself (no REQUEST_INSTALL_PACKAGES) - the browser downloads the update
             try { // which key signed the INSTALLED app (must equal the "Signing certificate SHA-256" in every GitHub Release note)
                 java.util.TreeSet<String> sg = new java.util.TreeSet<>(signers(installed(signFlag())));
                 o.put("certSha256", sg.isEmpty() ? "" : sg.first());
@@ -274,51 +274,15 @@ public class IfinexUpdatePlugin extends Plugin {
             o.put("assetName", assetName);
             o.put("assetSize", assetSize);
             o.put("sha256Published", assetSha != null);
+            o.put("sha256", assetSha == null ? "" : assetSha);
+            o.put("assetUrl", assetUrl);
         }
         return o;
     }
 
+    /** v2.12: in-app download removed (it needed REQUEST_INSTALL_PACKAGES, which triggers the install security warning). */
     @PluginMethod
-    public void download(final PluginCall call) {
-        ex.execute(new Runnable() {
-            @Override public void run() {
-                try {
-                    if (assetUrl == null || assetUrl.isEmpty()) {
-                        JSObject c = doCheck();
-                        if (!c.optBoolean("newer", false)) throw new Exception("up_to_date");
-                    }
-                    ready = null;
-                    File dir = updDir(); deleteDir(dir); dir.mkdirs();
-                    File part = new File(dir, "update.apk.part"), fin = new File(dir, "update.apk");
-                    HttpURLConnection c = open(assetUrl, "application/octet-stream");
-                    long total = c.getContentLength() > 0 ? (long) c.getContentLength() : assetSize;
-                    if (total > MAX_APK) { c.disconnect(); throw new Exception("too_large"); }
-                    MessageDigest md = MessageDigest.getInstance("SHA-256");
-                    long done = 0, lastEmit = 0;
-                    try (InputStream in = new BufferedInputStream(c.getInputStream()); FileOutputStream out = new FileOutputStream(part)) {
-                        byte[] buf = new byte[32768]; int n;
-                        while ((n = in.read(buf)) > 0) {
-                            out.write(buf, 0, n); md.update(buf, 0, n); done += n;
-                            if (done > MAX_APK) throw new Exception("too_large");
-                            long now = System.currentTimeMillis();
-                            if (now - lastEmit > 250) { lastEmit = now; JSObject p = new JSObject(); p.put("done", done); p.put("total", total); notifyListeners("progress", p); }
-                        }
-                    } finally { c.disconnect(); }
-                    JSObject p = new JSObject(); p.put("done", done); p.put("total", done); notifyListeners("progress", p);
-
-                    if (assetSha != null && !assetSha.equals(hex(md.digest()))) { deleteDir(dir); throw new Exception("checksum_mismatch"); }
-                    if (!part.renameTo(fin)) { deleteDir(dir); throw new Exception("rename_failed"); }
-                    String bad = verify(fin);
-                    if (bad != null) { deleteDir(dir); throw new Exception(bad); }
-                    ready = fin;
-                    JSObject o = new JSObject(); o.put("ok", true); o.put("version", assetVersion); o.put("bytes", done);
-                    call.resolve(o);
-                } catch (Exception e) {
-                    call.reject(e.getMessage() == null ? "download_failed" : e.getMessage());
-                }
-            }
-        });
-    }
+    public void download(final PluginCall call) { call.reject("disabled"); }
 
     /** returns null when the downloaded file may be installed, otherwise a short error code */
     @SuppressWarnings("deprecation")
@@ -337,22 +301,19 @@ public class IfinexUpdatePlugin extends Plugin {
         } catch (Exception e) { return "verify_failed"; }
     }
 
+    /** v2.12: opens the verified GitHub release asset in the phone's browser (download manager). The app itself never installs anything. */
     @PluginMethod
-    public void install(PluginCall call) {
+    public void install(final PluginCall call) {
         try {
-            File f = ready;
-            if (f == null || !f.exists()) { call.reject("nothing_downloaded"); return; }
-            if (Build.VERSION.SDK_INT >= 26 && !ctx().getPackageManager().canRequestPackageInstalls()) {
-                Intent s = new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:" + ctx().getPackageName()));
-                s.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                ctx().startActivity(s);
-                JSObject o = new JSObject(); o.put("needsPermission", true); call.resolve(o);
-                return;
+            String u = assetUrl;
+            if (u == null || u.isEmpty()) {
+                String repo = res("ifinex_update_repo", "").trim();
+                if (repo.isEmpty() || !REPO.matcher(repo).matches()) { call.reject("not_configured"); return; }
+                u = "https://github.com/" + repo + "/releases/latest";
             }
-            Uri uri = FileProvider.getUriForFile(ctx(), ctx().getPackageName() + ".fileprovider", f);
-            Intent i = new Intent(Intent.ACTION_VIEW);
-            i.setDataAndType(uri, "application/vnd.android.package-archive");
-            i.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_NEW_TASK);
+            if (!hostOk(new URL(u))) { call.reject("blocked_host"); return; }
+            Intent i = new Intent(Intent.ACTION_VIEW, Uri.parse(u));
+            i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             ctx().startActivity(i);
             JSObject o = new JSObject(); o.put("started", true); call.resolve(o);
         } catch (Exception e) { call.reject("install_failed: " + e.getMessage()); }

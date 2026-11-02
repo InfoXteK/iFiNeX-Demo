@@ -56,8 +56,5 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
-    <!-- Lets the app ask the user to exempt it from battery optimisation so alerts are not delayed. Google Play restricts this permission; fine for APK installs. -->
-    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
-    <!-- v2.1 in-app updater: lets iFiNeX hand its OWN downloaded, signature-checked update to the Android installer. Not used for any other file. -->
-    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+    <!-- v2.12: REQUEST_INSTALL_PACKAGES and REQUEST_IGNORE_BATTERY_OPTIMIZATIONS were REMOVED on purpose. Apps that declare them are flagged by Play Protect / the installer as "can install other apps / bypass battery limits" - that was the security alert. Updates are now downloaded by the browser; battery settings open via the normal Settings screen. -->
 </manifest>
