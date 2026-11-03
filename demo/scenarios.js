@@ -96,6 +96,11 @@
       { u: 'alex', p: BT, go: "switchPage('plans')", title: 'Plans', text: 'Same bar on EPP & Gold plans, plus Active / Completed tabs.' },
       { u: 'alex', p: BT, go: "switchPage('budget')", title: 'Budget planner', text: 'The month view is the default; switch to a custom range to see several months. Goals have no month so they only follow range mode.' }
     ] },
+    { id: 'reports', icon: '📊', title: 'Reports: users, dates, PDF & Excel', blurb: 'Bill Tracker and Squad Split report center.', steps: [
+      { u: 'alex', p: BT, go: "switchPage('home');ifxReports.open('bill')", title: 'Bill Tracker report center', text: 'Choose a period (this month … all time, one month or custom dates), then who: only this account, all users or ticked users. Alex is the admin so he sees the user choice; Priya would only see her own account.' },
+      { u: 'alex', p: BT, go: "ifxReports.open('bill')", title: 'Layout and sections', text: 'One section per user, one combined table or a monthly summary; tick which sections to include. Press 👁 Preview, then ⬇ PDF, ⬇ Excel or ⬇ CSV (the demo downloads a real file).' },
+      { u: 'alex', p: SQ, go: "ifxReports.open('squad')", title: 'Squad Split report center', text: 'Same window for the squad: choose members and squads. The Members table shows paid, share, carried-in, settled and NET — for one month it equals the Balances screen.' }
+    ] },
     { id: 'theme', icon: '🎨', title: 'Themes & alerts', blurb: '13 themes, 12 design styles, alert switches.', steps: [
       { u: 'alex', p: BT, go: "openAppearance()", title: 'Theme & background', text: 'Pick a colour theme and a design style; your choice follows you to every module and every device.' },
       { u: 'alex', p: BT, go: "openAlerts()", title: 'Alerts & notifications', text: 'Choose which reminders you want (card due dates, plans) and whether to enable push on this device. Push needs a real service worker + keys — in the demo only the switches work.' }
