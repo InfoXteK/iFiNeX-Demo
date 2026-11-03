@@ -17,7 +17,7 @@ Website = `web/` (plain HTML/JS, host anywhere static, e.g. GitHub Pages). Andro
 After you publish the demo (see `docs/10-LIVE-DEMO.md`, 5 minutes) your repository gets a **Live demo** link at `https://<your-user>.github.io/<repo>/`. It is a full explainer page, not just a preview:
 
 - **Choose Website or Mobile app** on the first screen (or both side by side).
-- **17 guided walkthroughs** — each opens the right screen for the right person (admin, member, delegate) and tells you what to try.
+- **18 guided walkthroughs** — each opens the right screen for the right person (admin, member, delegate) and tells you what to try.
 - **Request Inspector** — shows every database call the app makes (table, filter, payload) and why the database allows it.
 - **Searchable guide to every option and function** (77 entries), a **database explorer** (34 tables + server functions), key flows, roles table and honest limits.
 - Includes a clearly labelled **simulated Google Drive** connect / schedule / back-up / restore flow.
@@ -54,3 +54,6 @@ License: MIT (see LICENSE). Security: see SECURITY.md.
 
 ## What's new in v9.8
 Mark as completed / Reopen / Edit / Delete (⋯ menu) and an Active · Completed · All area in the Expense Tracker, EPP & Gold plans and Budget planner; month / custom date / category filters; automatic move to Completed (nightly `ifx_auto_complete()`); faster saving; Android app 2.12.0 no longer requests install/battery permissions (no install-permission warning). Database: run `supabase/schema.sql` on a new project (already includes v9.8).
+
+## What's new in v9.9
+**Report Center** in Bill Tracker and Squad Split: monthly / last 3 months / year / all time / one month / custom dates; my account, all users or chosen users (admins & delegates); chosen squad members and squads; one section per user, combined table or monthly summary; PDF, Excel and CSV. **Download fix:** files now go through Android's share sheet (the old browser-style download was ignored by the app's WebView) and every export in the app uses the same safe saver. No database change (still v9.8).
