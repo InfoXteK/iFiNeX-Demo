@@ -1,0 +1,2 @@
+iFiNeX open-source skeleton web 10.0 / app 3.0.0 — ONLY changed or new files since the v9.5 skeleton. Copy over your fork at the same paths.
+(supabase/schema.sql already contains the v9.8 database.) Personal data is not included.

@@ -57,3 +57,6 @@ Mark as completed / Reopen / Edit / Delete (⋯ menu) and an Active · Completed
 
 ## What's new in v9.9
 **Report Center** in Bill Tracker and Squad Split: monthly / last 3 months / year / all time / one month / custom dates; my account, all users or chosen users (admins & delegates); chosen squad members and squads; one section per user, combined table or monthly summary; PDF, Excel and CSV. **Download fix:** files now go through Android's share sheet (the old browser-style download was ignored by the app's WebView) and every export in the app uses the same safe saver. No database change (still v9.8).
+
+## Versioning
+Major number = a release with new features (web 10, app 3, …). Minor number = small fixes only. v10.0 / app 3.0.0 contains everything from v9.8–v9.10: Completed lifecycle + filters, faster saving, Report Center + working downloads, in-app updater.
