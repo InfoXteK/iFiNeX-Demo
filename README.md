@@ -60,3 +60,6 @@ Mark as completed / Reopen / Edit / Delete (⋯ menu) and an Active · Completed
 
 ## Versioning
 Major number = a release with new features (web 10, app 3, …). Minor number = small fixes only. v10.0 / app 3.0.0 contains everything from v9.8–v9.10: Completed lifecycle + filters, faster saving, Report Center + working downloads, in-app updater.
+
+## What's new in v11.0 (app 4.0.0)
+**Hub report for every module** — 📊 Reports & Downloads on the Hub: Bill Tracker, Squad Split, Expense / Trip / Event trackers (all or one chosen trip/event), Budget planner and EPP & Gold plans; month, custom dates, users; month-by-month overview; preview, PDF, Excel, CSV. No database change.

@@ -98,6 +98,7 @@
     ] },
     { id: 'reports', icon: '📊', title: 'Reports: users, dates, PDF & Excel', blurb: 'Bill Tracker and Squad Split report center.', steps: [
       { u: 'alex', p: BT, go: "switchPage('home');ifxReports.open('bill')", title: 'Bill Tracker report center', text: 'Choose a period (this month … all time, one month or custom dates), then who: only this account, all users or ticked users. Alex is the admin so he sees the user choice; Priya would only see her own account.' },
+      { u: 'alex', p: BT, go: "switchPage('hub');ifxReports.open('all')", title: 'Hub: all modules in one report', text: 'The Hub has a 📊 Reports & Downloads tile. Tick the modules you want (Bill Tracker, Squad Split, trackers, Budget, Plans), choose the period, and for trackers optionally one trip or event. With several modules you get a month-by-month overview first.' },
       { u: 'alex', p: BT, go: "ifxReports.open('bill')", title: 'Layout and sections', text: 'One section per user, one combined table or a monthly summary; tick which sections to include. Press 👁 Preview, then ⬇ PDF, ⬇ Excel or ⬇ CSV (the demo downloads a real file).' },
       { u: 'alex', p: SQ, go: "ifxReports.open('squad')", title: 'Squad Split report center', text: 'Same window for the squad: choose members and squads. The Members table shows paid, share, carried-in, settled and NET — for one month it equals the Balances screen.' }
     ] },

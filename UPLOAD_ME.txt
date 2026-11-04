@@ -1,2 +1,1 @@
-iFiNeX open-source skeleton web 10.0 / app 3.0.0 — ONLY changed or new files since the v9.5 skeleton. Copy over your fork at the same paths.
-(supabase/schema.sql already contains the v9.8 database.) Personal data is not included.
+iFiNeX web 11.0 / app 4.0.0 — ONLY files changed since the v9.5 pack / app 2.11. Copy each file to the same path (replace). Your ifinex-config.json, privacy.html, terms.html, assets, vendor are not included (unchanged). App: build a new APK and install it once by hand.
