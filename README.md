@@ -61,6 +61,13 @@ Mark as completed / Reopen / Edit / Delete (⋯ menu) and an Active · Completed
 ## Versioning
 Major number = a release with new features (web 10, app 3, …). Minor number = small fixes only. v10.0 / app 3.0.0 contains everything from v9.8–v9.10: Completed lifecycle + filters, faster saving, Report Center + working downloads, in-app updater.
 
+## What's new in v12.2 (web 12.2 / app 5.1.1) — correct, readable statement
+* **Squad Split now matches the Squad page** (all expenses + carried balances − settlements, then the same "simplify" netting). Before, the report only looked inside single months and showed 0 for someone who owes 547.
+* **Who pays whom:** one column per person ("To pay Abdullah", "To pay Naina" …), one row per module, TOTAL TO PAY.
+* **One block per person**, months **newest first** (opening + new charges − paid = closing), ending with "X NEEDS TO PAY Y — TOTAL"; the **GRAND TOTAL is always the last table**.
+* Full breakdown: every entry newest first with a running balance; a "Squad netting" line explains the difference to a one-to-one ledger.
+* PDF: no more broken characters (arrows / minus), bold headings, right-aligned numbers.
+
 ## What's new in v12.1 (web 12.1 / app 5.1.0) — Play Protect fix
 * The GitHub workflow built a **debug** APK (`assembleDebug`, debuggable=true) and published it. Google Play Protect treats debuggable, side-loaded APKs that can install other APKs as high risk ("Harmful app blocked"). The workflow now builds `assembleRelease` (debuggable=false) signed with the SAME permanent key, so updates still install over the old app.
 * `build.gradle` release type: `debuggable false`, uses the iFiNeX key (fallback: debug key only when no key exists).

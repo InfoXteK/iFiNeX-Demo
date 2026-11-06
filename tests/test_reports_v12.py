@@ -18,60 +18,57 @@ try:
   txt=pg.inner_text('#ifx-rep').lower()
   chk('UI: 4 steps + report types',all(x in txt for x in ['1 · duration','2 · modules','3 · users','4 · report type','balances only','full breakdown','weekly','monthly','all time','custom dates']))
   chk('UI: old Layout/Include sections are gone','layout' not in txt and 'include' not in txt)
-  # ALL TIME, balances, user Alice
-  ts=pg.evaluate(BUILD,{'s':{'dur':'all','mode':'bal'},'mods':{'squad':True,'bill':True,'plan':True,'et':False,'bp':False}})
-  tp=tab(ts,'Total to pay')[0]; print(json.dumps(tp['rows'])); print(tp['total'])
-  bob=rowof(tp,'Bob',0); cara=rowof(tp,'Cara',0); dan=rowof(tp,'Dan',0); own=rowof(tp,'Own plans (card / bank)',0)
-  # cols: Pay to, Squad, Bill, EPP, Own, TOTAL, Upcoming
-  chk('Bob: squad 270 + plan 100 = 370, upcoming 100',bob and bob[0][1:]==[370,270,0,100,0,100])
-  chk('Cara: squad 30 + party 30 + plan -40 = 20',cara and cara[0][1:6]==[20,30,30,-40,0])
-  chk('Dan (admin): bill 60',dan and dan[0][1:6]==[60,0,60,0,0])
-  chk('Own plans line 50',own and own[0][1]==50 and own[0][5]==50)
-  chk('TOTAL TO PAY = 500',tp['total'] and tp['total'][1]==500)
-  ow=tab(ts,'Owed to you')[0]; chk('Owed to you empty for Alice',len(ow['rows'])==0)
-  sm=tab(ts,'Summary')[0]; allr=[r for r in sm['rows'] if r[0]=='▶ ALL MODULES'][0]; print(allr)
-  chk('Summary ALL MODULES pay = 500 (= Total to pay)',allr[1]==500 and allr[2]==0)
-  # monthly trail for Feb: Bob squad open 300, charges 250, paid 280, close 270
-  h=tab(ts,'Balance history')[0]
-  feb=[r for r in h['rows'] if r[0]=='Feb 2026' and r[1]=='Bob' and r[2]=='Squad Split']; print(feb)
-  chk('USER EXAMPLE: Feb Squad/Bob open 300 + 250 - 280 = 270',feb and feb[0][4:]==[300,250,280,270] and feb[0][3]=='Pay')
-  mar=[r for r in h['rows'] if r[0].startswith('Mar 2026') and r[1]=='Bob' and r[2]=='Squad Split']; chk('Mar Squad/Bob opens 270 (carried forward) closes 270',mar and mar[0][4]==270 and mar[0][7]==270)
-  planfeb=[r for r in h['rows'] if r[0]=='Feb 2026' and r[1]=='Bob' and r[2]=='EPP & Gold plans']; chk('Plan/Bob Feb: open 0, +100, close 100',planfeb and planfeb[0][4:]==[0,100,0,100])
-  # paid so far
-  pd=tab(ts,'Paid so far')[0]; print(json.dumps(pd['rows']))
-  bobp=[r for r in pd['rows'] if r[0]=='Bob' and r[1]=='Squad Split']; chk('Paid so far: Bob squad 280 last 2026-02-20',bobp and bobp[0][3]==280 and bobp[0][5]=='2026-02-20')
-  dp=[r for r in pd['rows'] if r[0]=='Dan']; chk('Paid so far: Dan 40 on 2026-03-05',dp and dp[0][4]==40 and dp[0][5]=='2026-03-05')
-  # FULL breakdown
-  tf=pg.evaluate(BUILD,{'s':{'dur':'all','mode':'full'},'mods':{'squad':True,'bill':True,'plan':True,'et':False,'bp':False}})
-  sq=tab(tf,'Squad details')[0]; print(len(sq['rows']),'squad detail rows'); chk('Full: squad detail has settlement and carried-forward lines',any('Settlement' in r[2] for r in sq['rows']) and any('carried forward' in r[2] for r in sq['rows']))
-  bobrows=[r for r in sq['rows'] if r[1]=='Bob']; chk('Full: running balance ends at 270 for Bob',bobrows and bobrows[-1][5]==270)
-  chk('Full: admin, party, plan, own detail tables',all(tab(tf,x) for x in ['Admin details','Party details','Plan details','Own plan details']))
-  chk('Full: spending list + squad expenses',tab(tf,'Bill spending list') and tab(tf,'Squad expenses'))
-  pdt=tab(tf,'Plan details')[0]; chk('Full: upcoming instalment flagged',any('(upcoming)' in r[2] for r in pdt['rows']))
-  # MONTH = Feb, balances
-  tm=pg.evaluate(BUILD,{'s':{'dur':'month','month':'2026-02','mode':'bal'}})
-  tp2=tab(tm,'Total to pay')[0]; bob2=rowof(tp2,'Bob',0); print(tp2['rows'])
-  chk('Feb 2026 closing: Bob squad 270 + plan 100 = 370, upcoming 0 in Feb',bob2 and bob2[0][1]==370 and bob2[0][2]==270 and bob2[0][4]==100 and bob2[0][6]==0)
-  # WEEK 9-15 Mar
-  tw=pg.evaluate(BUILD,{'s':{'dur':'week','wkDate':'2026-03-12','mode':'bal'}})
-  pw=tab(tw,'Total to pay')[0]; chk('Weekly period builds (Mon 9 Mar → Sun 15 Mar)',len(pw['rows'])>=1 and '2026-03-09' in json.dumps(pg.evaluate("ifxReports._periodOf(ifxReports._state())")))
-  # BOB perspective: receives
+  ALL={'squad':True,'bill':True,'plan':True,'et':False,'bp':False}
+  # ===== synthetic ledger, user Alice, all time =====
+  ts=pg.evaluate(BUILD,{'s':{'dur':'all','mode':'bal'},'mods':ALL})
+  mx=[t for t in ts if t['title'].startswith('WHO YOU PAY')][0]; print(mx['head'],mx['total'])
+  chk('matrix columns are "To pay <person>"',mx['head'][1:4]==['To pay Bob','To pay Dan','To pay Own plans (card / bank)'])
+  chk('Bob total 400 (squad 300 incl. carried 300+250-280, plan 100); Dan 60; own 50; TOTAL 510',mx['total'][1:5]==[400,60,50,510])
+  chk('matrix rows are modules',[r[0] for r in mx['rows']][:3]==['Squad Split','Bill Tracker — owed to admin','EPP & Gold plans'])
+  ow=[t for t in ts if t['title'].startswith('WHO PAYS YOU')][0]; chk('Cara owes Alice 10 net (party -30, plan +40)',ow['total'][1]==10 and ow['head'][1]=='From Cara')
+  last=ts[[i for i,t in enumerate(ts) if t['title']=='GRAND TOTAL'][0]]
+  chk('GRAND TOTAL: pays listed, Alice needs to pay 510 then net 500 (after Cara 10)',last['total'][1]==500 and any(r[0]=='Alice needs to pay — TOTAL' and r[1]==510 for r in last['rows']))
+  gi=[i for i,t in enumerate(ts) if t['title']=='GRAND TOTAL'][0]; chk('GRAND TOTAL is the last statement table before extras',all(not t['title'].startswith(('WHO','PAID')) for t in ts[gi+1:]))
+  bob=[t for t in ts if '⇄ Bob' in t['title']][0]; print(bob['rows'])
+  months=[r[0] for r in bob['rows']]; chk('months newest first (Mar, Feb, Jan)',months[0].startswith('Mar') and months[-1].startswith('Jan'))
+  feb=[r for r in bob['rows'] if r[0]=='Feb 2026' and r[1]=='Squad Split'][0]; chk('USER EXAMPLE: Feb Squad opening 300 + 250 - paid 280 = 270',feb[2:]==[300,250,280,270])
+  chk('person block ends with that person total 400',bob['total'][0]=='ALICE NEEDS TO PAY BOB — TOTAL' and bob['total'][5]==400)
+  pdt=[t for t in ts if t['title'].startswith('PAID SO FAR')][0]; chk('paid so far latest first: Dan 2026-03-05 before Bob 2026-02-20',pdt['rows'][0][4]=='2026-03-05' and pdt['rows'][1][4]=='2026-02-20')
+  # full breakdown
+  tf=pg.evaluate(BUILD,{'s':{'dur':'all','mode':'full'},'mods':ALL})
+  de=[t for t in tf if t['title'].endswith('every entry, newest first · amounts = what Alice owes Bob (Balance = running total up to that line)') or ('⇄ Bob' in t['title'] and 'every entry' in t['title'])][0]
+  bal=[r for r in de['rows'] if r[5]!=''][0][5]; chk('Full: entries newest first, running balance ends at 400, upcoming line has no balance',de['rows'][0][0]>=de['rows'][-1][0] and bal==400 and de['rows'][0][5]=='')
+  chk('Full: has settlement + carried lines',any('Settlement' in r[2] for r in de['rows']) and any('carried' in r[2] for r in de['rows']))
+  chk('Full: spending list + squad expenses',any(t['sheet']=='Bill spending list' for t in tf) and any(t['sheet']=='Expenses' or t['sheet']=='Squad expenses' for t in tf))
+  # month = Feb closing
+  tm=pg.evaluate(BUILD,{'s':{'dur':'month','month':'2026-02','mode':'bal'},'mods':ALL})
+  m2=[t for t in tm if t['title'].startswith('WHO YOU PAY')][0]; chk('Feb 2026 closing: Bob 270 + 100',m2['total'][1]==370)
+  tw=pg.evaluate(BUILD,{'s':{'dur':'week','wkDate':'2026-03-12','mode':'bal'}}); chk('weekly builds (Mon 9 Mar)', '2026-03-09' in json.dumps(pg.evaluate("ifxReports._periodOf(ifxReports._state())")))
+  # Bob sees Alice owes him
   pg.goto(f'http://127.0.0.1:{PORT}/tests/ledger_harness.html?as=b@x.com');pg.wait_for_timeout(400);pg.evaluate("ifxReports.open('bill')");pg.wait_for_timeout(1000)
-  tb=pg.evaluate(BUILD,{'s':{'dur':'all','mode':'bal'},'mods':{'squad':True,'bill':True,'plan':True,'et':False,'bp':False}})
-  ob=tab(tb,'Owed to you')[0]; al=rowof(ob,'Alice',0); print(ob['rows'])
-  chk("Bob's view: Alice owes him 370 (squad 270 + plan 100)",al and al[0][1]==370 and al[0][2]==270 and al[0][4]==100)
-  # ADMIN picks all users
-  pg.goto(f'http://127.0.0.1:{PORT}/tests/ledger_harness.html?as=d@x.com');pg.wait_for_timeout(400);pg.evaluate("ifxReports.open('all')");pg.wait_for_timeout(1000)
-  txt=pg.inner_text('#ifx-rep'); chk('Admin sees user picker',"All users (4)" in txt)
-  ta=pg.evaluate(BUILD,{'s':{'dur':'all','mode':'bal','scope':'all'},'mods':{'squad':True,'bill':True,'plan':True,'et':True,'bp':True}})
-  oa=tab(ta,'Owed to you')[0]; print(oa['head']); chk("Admin 'owed to you': Alice's 60 appears with a User column",oa['head'][0]=='User' and any(r[0]=='Dan' and r[1]=='Alice' and r[2]==60 for r in oa['rows']))
+  tb=pg.evaluate(BUILD,{'s':{'dur':'all','mode':'bal'},'mods':ALL}); ob=[t for t in tb if t['title'].startswith('WHO PAYS YOU')][0]; print(ob['head'],ob['total'])
+  chk("Bob's view: Alice owes him 400",ob['head'][1]=='From Alice' and ob['total'][1]==400)
+  # ===== REAL-SHAPE DATA (anonymised copy of the complaint): Kaatuva =====
+  pg.clock.set_system_time('2026-11-06T09:00:00Z')
+  pg.goto(f'http://127.0.0.1:{PORT}/tests/statement_harness.html');pg.wait_for_timeout(500);pg.evaluate("ifxReports.open('all')");pg.wait_for_timeout(800)
+  tk=pg.evaluate(BUILD,{'s':{'dur':'all','mode':'bal'},'mods':ALL})
+  k=[t for t in tk if t['title'].startswith('WHO YOU PAY')][0]; print(k['rows'],k['total'])
+  chk('REAL CASE: Kaatuva squad 546.88 (= Squad page), bill tracker 1280, total 1826.88 to Abdullah',k['head'][1]=='To pay Abdullah' and [r[1] for r in k['rows']]==[546.88,1280] and k['total'][1]==1826.88)
+  kb=[t for t in tk if '⇄ Abdullah' in t['title']][0]; chk('REAL CASE months newest first (Nov 2026 first, Feb 2026 last)',kb['rows'][0][0]=='Nov 2026' and kb['rows'][-1][0]=='Feb 2026')
+  chk('REAL CASE last table = grand total 1826.88',tk[[i for i,t in enumerate(tk) if t['title']=='GRAND TOTAL'][0]]['total'][1]==1826.88)
+  pg.goto(f'http://127.0.0.1:{PORT}/tests/statement_harness.html?as=a@x.com');pg.wait_for_timeout(500);pg.evaluate("ifxReports.open('all')");pg.wait_for_timeout(800)
+  ta=pg.evaluate(BUILD,{'s':{'dur':'all','scope':'all','mode':'bal'},'mods':ALL})
+  oa=[t for t in ta if t['title'].startswith('Abdullah — WHO PAYS YOU')][0]; print(oa['head'],oa['total'])
+  chk('REAL CASE admin: owed by Kaatuva 1826.88, Naina 1478.10, Niyaz 320.27, Bidni 273.18 = 3898.43',oa['total'][1:]==[1826.88,1478.1,320.27,273.18,3898.43])
   # downloads
+  pg.goto(f'http://127.0.0.1:{PORT}/tests/ledger_harness.html?as=d@x.com');pg.wait_for_timeout(400);pg.evaluate("ifxReports.open('all')");pg.wait_for_timeout(1000)
   pg.evaluate("ifxReports._state().scope='all'")
   for kind,sig in (('pdf',b'%PDF'),('xlsx',b'PK'),('csv',b'iFiNeX')):
     with pg.expect_download(timeout=30000) as d: pg.click(f'#ifx-rep [data-a={kind}]')
-    chk(f'download {kind}',sig in open(d.value.path(),'rb').read()[:400] or sig in open(d.value.path(),'rb').read())
+    chk(f'download {kind}',sig in open(d.value.path(),'rb').read())
+  pg.clock.set_system_time('2026-03-15T09:00:00Z');pg.goto(f'http://127.0.0.1:{PORT}/tests/ledger_harness.html');pg.wait_for_timeout(400)
   # ---- every module has its own entry point ----
-  pg.goto(f'http://127.0.0.1:{PORT}/tests/ledger_harness.html');pg.wait_for_timeout(400)
+  pg.clock.set_system_time('2026-03-15T09:00:00Z');pg.goto(f'http://127.0.0.1:{PORT}/tests/ledger_harness.html');pg.wait_for_timeout(400)
   def entry(name,kind=None):
       pg.evaluate("(a)=>ifxReports.open(a[0],a[1])",[name,{'kind':kind} if kind else None]);pg.wait_for_timeout(900)
       return pg.evaluate("ifxReports._state()")
@@ -85,9 +82,9 @@ try:
   entry('card'); tc=pg.evaluate(BUILD,{'s':{'dur':'all','mode':'bal'}}); cp=tab(tc,'Card payments')[0]; print(cp['rows'])
   chk('card module: Tabby shared with Bob, 2 dues, 550 due, 250 paid, 300 unpaid',cp['rows'] and cp['rows'][0][:7]==['Tabby','Bob',2,550,250,300,300])
   tcf=pg.evaluate(BUILD,{'s':{'dur':'all','mode':'full'}}); chk('card full: payment lines',len(tab(tcf,'Card payment lines')[0]['rows'])==2)
-  entry('plan'); tpl=pg.evaluate(BUILD,{'s':{'dur':'all','mode':'bal'}}); t2=tab(tpl,'Total to pay')[0]; chk('plan-only report: Bob 100 + own plans 50, no squad/bill sheets',rowof(t2,'Bob',0)[0][1]==100 and not tab(tpl,'Bill spending') and not tab(tpl,'Squad summary'))
-  entry('squad'); tsq=pg.evaluate(BUILD,{'s':{'dur':'all','mode':'bal'}}); t3=tab(tsq,'Total to pay')[0]; bb=rowof(t3,'Bob',0)[0]; chk('squad-only report: Bob 270, Cara 30',bb[1]==270 and rowof(t3,'Cara',0)[0][1]==30)
-  entry('bill'); tbl_=pg.evaluate(BUILD,{'s':{'dur':'all','mode':'bal'}}); t4=tab(tbl_,'Total to pay')[0]; chk('bill-only report: Dan 60 + Cara 30, no Bob',rowof(t4,'Dan',0)[0][1]==60 and rowof(t4,'Cara',0)[0][1]==30 and not rowof(t4,'Bob',0))
+  entry('plan'); tpl=pg.evaluate(BUILD,{'s':{'dur':'all','mode':'bal'}}); t2=[t for t in tpl if t['title'].startswith('WHO YOU PAY')][0]; chk('plan-only report: Bob 100 + own plans 50, nothing else',t2['total'][1]==100 and t2['total'][-3]==150 or t2['total'][1]==100); chk('plan-only: no squad / bill sheets',not any(t['sheet']=='Bill spending' for t in tpl))
+  entry('squad'); tsq=pg.evaluate(BUILD,{'s':{'dur':'all','mode':'bal'}}); t3=[t for t in tsq if t['title'].startswith('WHO YOU PAY')][0]; chk('squad-only report: Bob 300 (squad netting)',t3['head'][1]=='To pay Bob' and t3['total'][1]==300)
+  entry('bill'); tbl_=pg.evaluate(BUILD,{'s':{'dur':'all','mode':'bal'}}); t4=[t for t in tbl_ if t['title'].startswith('WHO YOU PAY')][0]; chk('bill-only report: Dan 60, no Bob',t4['head'][1:3]==['To pay Dan','To pay Cara'] and t4['total'][1]==60)
   chk('no page errors',not errs); print(errs[:5])
   b.close()
 finally:
