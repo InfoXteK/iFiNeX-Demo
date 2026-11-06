@@ -61,5 +61,8 @@ Mark as completed / Reopen / Edit / Delete (⋯ menu) and an Active · Completed
 ## Versioning
 Major number = a release with new features (web 10, app 3, …). Minor number = small fixes only. v10.0 / app 3.0.0 contains everything from v9.8–v9.10: Completed lifecycle + filters, faster saving, Report Center + working downloads, in-app updater.
 
+## What's new in v12.0 (app 5.0.0)
+**Statements that say who pays whom** — every module now has its own 📊 report button (Bill Tracker, Party ledger, Squad Split, EPP & Gold plans, Shared card payments, Expense / Event / Trip trackers, Budget planner) and the Hub has the all-modules one. One simple window: **1 Duration** (Weekly · Monthly · All time · Custom) · **2 Modules** (tick boxes) · **3 Users** · **4 Report type**. *Balances only* = TOTAL TO PAY per person (Squad Split + Bill Tracker + EPP & Gold together), OWED TO YOU, Paid so far (to whom, how much, when) and a month-by-month balance (brought forward + new charges − paid = closing). *Full breakdown* adds every share, settlement, carried-forward balance, party entry, instalment, spending line and card due. Output: preview · PDF · Excel · CSV. Read-only, no database change. Supabase "disk IO budget" e-mail investigated: the database is idle (18 MB, ~1 checkpoint buffer per run); see the reference file section W.
+
 ## What's new in v11.0 (app 4.0.0)
 **Hub report for every module** — 📊 Reports & Downloads on the Hub: Bill Tracker, Squad Split, Expense / Trip / Event trackers (all or one chosen trip/event), Budget planner and EPP & Gold plans; month, custom dates, users; month-by-month overview; preview, PDF, Excel, CSV. No database change.

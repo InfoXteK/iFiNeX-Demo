@@ -1,1 +1,1 @@
-iFiNeX web 11.0 / app 4.0.0 — ONLY files changed since the v9.5 pack / app 2.11. Copy each file to the same path (replace). Your ifinex-config.json, privacy.html, terms.html, assets, vendor are not included (unchanged). App: build a new APK and install it once by hand.
+iFiNeX web 12.0 / app 5.0.0 — ONLY files changed since v11.0. Copy each file to the same path (replace). Your ifinex-config.json, privacy.html, terms.html, assets, vendor are not included (unchanged). App: build a new APK and install it once by hand. If you skipped v11.0, use the FULL repo zip instead.

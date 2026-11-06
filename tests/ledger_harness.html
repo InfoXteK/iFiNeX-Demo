@@ -1,0 +1,51 @@
+<!doctype html><meta charset="utf-8"><title>ledger harness</title><base href="/web/">
+<body><div id="toast"></div>
+<script>
+/* synthetic data — dates are relative to the fixed clock 2026-03-15 */
+var AS = (new URLSearchParams(location.search)).get('as') || 'a@x.com';
+var DB = {
+ app_users:[{id:1,email:'a@x.com',name:'Alice',is_admin:false},{id:2,email:'b@x.com',name:'Bob',is_admin:false},{id:3,email:'c@x.com',name:'Cara',is_admin:false},{id:4,email:'d@x.com',name:'Dan',is_admin:true}],
+ members_config:[{id:'a',name:'Alice',email:'a@x.com'},{id:'b',name:'Bob',email:'B@x.com'},{id:'c',name:'Cara',email:'c@x.com'}],
+ squads:[{id:1,name:'Squad 1',is_archived:false}],
+ squad_members:[{squad_id:1,member_id:'a'},{squad_id:1,member_id:'b'},{squad_id:1,member_id:'c'}],
+ expenses:[
+  {id:1,squad_id:1,name:'Feb dinner',amount:750,paid_by:'b',split_between:['a','b','c'],date:'2026-02-10',month:'2026-02',category:'Food'},
+  {id:2,squad_id:1,name:'Mar taxi',amount:90,paid_by:'c',split_between:['a','b','c'],date:'2026-03-05',month:'2026-03',category:'Travel'}],
+ prev_balances:[{id:1,squad_id:1,from_member:'a',to_member:'b',amount:300,month:'2026-01'},{id:2,squad_id:1,from_member:'a',to_member:'b',amount:270,month:'2026-02'}],
+ settlements:[{id:1,squad_id:1,from_member:'a',to_member:'b',amount:280,month:'2026-02',created_at:'2026-02-20T10:00:00Z'}],
+ bill_owed:[{id:1,user_email:'a@x.com',amount:100,month:'2026-02',note:'Feb bills',created_at:'2026-02-10T08:00:00Z'}],
+ bill_settlements:[{id:1,user_email:'a@x.com',amount:40,month:'2026-03',created_at:'2026-03-05T08:00:00Z'}],
+ bill_payees:[{id:1,user_email:'a@x.com',party_name:'Cara',party_email:'c@x.com'},{id:2,user_email:'c@x.com',party_name:'Alice',party_email:'a@x.com'}],
+ bill_payee_entries:[{id:1,payee_id:1,entry_type:'owe',amount:50,date:'2026-03-02',month:'2026-03',note:'lunch',payment_type:'cash'},{id:2,payee_id:2,entry_type:'owe',amount:20,date:'2026-03-03',month:'2026-03',note:'ride'}],
+ bill_cards:[{id:1,user_email:'a@x.com',card_name:'Tabby'}],
+ bill_expenses:[{id:1,user_email:'a@x.com',description:'Groceries',amount:80,card_id:1,category:'Food',date:'2026-03-04',month:'2026-03'}],
+ bill_plans:[
+  {id:1,user_email:'a@x.com',ledger:'owe_other',payee_id:3,title:'Bob phone',installments:3,card_id:1},
+  {id:2,user_email:'a@x.com',ledger:'own',title:'Gym',installments:1,card_id:1},
+  {id:3,user_email:'a@x.com',ledger:'owed_to_you',payee_id:1,title:'Cara laptop',installments:1}],
+ bill_plan_payments:[
+  {id:1,plan_id:1,seq:1,due_date:'2026-01-31',amount:100,status:'paid',paid_at:'2026-01-31T09:00:00Z'},
+  {id:2,plan_id:1,seq:2,due_date:'2026-02-28',amount:100,status:'pending'},
+  {id:3,plan_id:1,seq:3,due_date:'2026-03-31',amount:100,status:'pending'},
+  {id:4,plan_id:2,seq:1,due_date:'2026-03-10',amount:50,status:'pending'},
+  {id:5,plan_id:3,seq:1,due_date:'2026-02-15',amount:40,status:'pending'}],
+ et_trackers:[{id:1,user_email:'a@x.com',kind:'trip',title:'Goa trip',start_date:'2026-03-01',end_date:'2026-03-10',status:'active'},{id:2,user_email:'a@x.com',kind:'occasion',title:'Wedding',start_date:'2026-03-05',end_date:'2026-03-06',status:'active'}],
+ et_entries:[{id:1,tracker_id:1,entry_date:'2026-03-02',amount:200,category:'Hotel',spent_by:'Alice',note:''},{id:2,tracker_id:2,entry_date:'2026-03-05',amount:500,category:'Hall',spent_by:'Bob',note:''}],
+ bill_card_payments:[{id:1,card_id:1,user_email:'a@x.com',month:'2026-03',due_date:'2026-03-10',amount_due:300,status:'pending'},{id:2,card_id:1,user_email:'a@x.com',month:'2026-02',due_date:'2026-02-10',amount_due:250,status:'paid',paid_at:'2026-02-09T08:00:00Z'}],
+ bill_card_shares:[{id:1,card_id:1,owner_email:'a@x.com',shared_with_email:'b@x.com'}],
+ bp_income:[],bp_items:[],bp_goals:[]
+};
+DB.bill_payees.push({id:3,user_email:'a@x.com',party_name:'Bob',party_email:'b@x.com'});
+function Q(t){var rows=(DB[t]||[]).slice(),self={error:null};
+ self.select=function(){return self};self.order=function(){return self};self.limit=function(n){rows=rows.slice(0,n);return self};
+ self.range=function(a,b){rows=rows.slice(a,b+1);return self};
+ self.ilike=function(c,p){var q=String(p).replace(/\\/g,'').toLowerCase();rows=rows.filter(function(r){return String(r[c]||'').toLowerCase()===q});return self};
+ self.eq=function(c,v){rows=rows.filter(function(r){return r[c]===v});return self};
+ self.in=function(c,a){rows=rows.filter(function(r){return a.indexOf(r[c])>=0});return self};
+ self.then=function(ok,no){return Promise.resolve({data:rows,error:DB[t]?null:{message:'no table'}}).then(ok,no)};return self}
+let sb={from:Q,auth:{getUser:function(){return Promise.resolve({data:{user:{email:AS}}})}}};
+let me={email:AS,name:AS.split('@')[0]};let managing=me;
+function canManageOwed(){return AS==='d@x.com'}
+</script>
+<script src="ifinex-tools.js"></script>
+<script src="ifinex-reports.js"></script>
