@@ -61,6 +61,10 @@ Mark as completed / Reopen / Edit / Delete (⋯ menu) and an Active · Completed
 ## Versioning
 Major number = a release with new features (web 10, app 3, …). Minor number = small fixes only. v10.0 / app 3.0.0 contains everything from v9.8–v9.10: Completed lifecycle + filters, faster saving, Report Center + working downloads, in-app updater.
 
+## What's new in v12.1 (web 12.1 / app 5.1.0) — Play Protect fix
+* The GitHub workflow built a **debug** APK (`assembleDebug`, debuggable=true) and published it. Google Play Protect treats debuggable, side-loaded APKs that can install other APKs as high risk ("Harmful app blocked"). The workflow now builds `assembleRelease` (debuggable=false) signed with the SAME permanent key, so updates still install over the old app.
+* `build.gradle` release type: `debuggable false`, uses the iFiNeX key (fallback: debug key only when no key exists).
+
 ## What's new in v12.0 (app 5.0.0)
 **Statements that say who pays whom** — every module now has its own 📊 report button (Bill Tracker, Party ledger, Squad Split, EPP & Gold plans, Shared card payments, Expense / Event / Trip trackers, Budget planner) and the Hub has the all-modules one. One simple window: **1 Duration** (Weekly · Monthly · All time · Custom) · **2 Modules** (tick boxes) · **3 Users** · **4 Report type**. *Balances only* = TOTAL TO PAY per person (Squad Split + Bill Tracker + EPP & Gold together), OWED TO YOU, Paid so far (to whom, how much, when) and a month-by-month balance (brought forward + new charges − paid = closing). *Full breakdown* adds every share, settlement, carried-forward balance, party entry, instalment, spending line and card due. Output: preview · PDF · Excel · CSV. Read-only, no database change. Supabase "disk IO budget" e-mail investigated: the database is idle (18 MB, ~1 checkpoint buffer per run); see the reference file section W.
 
